@@ -1,0 +1,299 @@
+import sqlite3
+import os
+
+
+def main():
+    process_files()
+    return
+
+
+# ==============================================================================
+# OPTIONS AND FILE FORMAT SETTINGS
+
+# SQLite database file name
+DBNAME = 'cclf_data.sqlite'
+
+# Establish SQLite Database connection
+cnx = sqlite3.connect(DBNAME)
+cnx.row_factory = sqlite3.Row
+
+# Define the path to the CCLF files
+path_to_files = 'C:\\Users\\user\\Documents\\CCLF123'
+
+# Get file name list from the specified directory
+file_list = os.listdir(path_to_files)
+# Filter files that start with 'P.' and end with '.T0902530'
+file_list = [x for x in file_list if x.startswith('P.')]
+
+# Look up format based on file name
+file_name_xwalk = {
+    'ZC1': 'CCLF1',
+    'ZC2': 'CCLF2',
+    'ZC3': 'CCLF3',
+    'ZC4': 'CCLF4',
+    'ZC5': 'CCLF5',
+    'ZC6': 'CCLF6',
+    'ZC7': 'CCLF7',
+    'ZC8': 'CCLF8',
+    'ZC9': 'CCLF9',
+}
+
+# File formats from:
+#    https://www.cms.gov/files/document/cclf-file-data-elements-resource.pdf
+# Format: [Column_name, start_position, end_position]
+
+file_formats = {
+    'CCLF1': [
+        ['CUR_CLM_UNIQ_ID', 1, 13],
+        ['PRVDR_OSCAR_NUM', 14, 19],
+        ['BENE_MBI_ID', 20, 30],
+        ['BENE_HIC_NUM', 31, 41],
+        ['CLM_TYPE_CD', 42, 43],
+        ['CLM_FROM_DT', 44, 53],
+        ['CLM_THRU_DT', 54, 63],
+        ['CLM_BILL_FAC_TYPE_CD', 64, 64],
+        ['CLM_BILL_CLSFCTN_CD', 65, 65],
+        ['PRNCPL_DGNS_CD', 66, 72],
+        ['ADMTG_DGNS_CD', 73, 79],
+        ['CLM_MDCR_NPMT_RSN_CD', 80, 81],
+        ['CLM_PMT_AMT', 82, 98],
+        ['CLM_NCH_PRMRY_PYR_CD', 99, 99],
+        ['PRVDR_FAC_FIPS_ST_CD', 100, 101],
+        ['BENE_PTNT_STUS_CD', 102, 103],
+        ['DGNS_DRG_CD', 104, 107],
+        ['CLM_OP_SRVC_TYPE_CD', 108, 108],
+        ['FAC_PRVDR_NPI_NUM', 109, 118],
+        ['OPRTG_PRVDR_NPI_NUM', 119, 128],
+        ['ATNDG_PRVDR_NPI_NUM', 129, 138],
+        ['OTHR_PRVDR_NPI_NUM', 139, 148],
+        ['CLM_ADJSMT_TYPE_CD', 149, 150],
+        ['CLM_EFCTV_DT', 151, 160],
+        ['CLM_IDR_LD_DT', 161, 170],
+        ['BENE_EQTBL_BIC_HICN_NUM', 171, 181],
+        ['CLM_ADMSN_TYPE_CD', 182, 183],
+        ['CLM_ADMSN_SRC_CD', 184, 185],
+        ['CLM_BILL_FREQ_CD', 186, 186],
+        ['CLM_QUERY_CD', 187, 187],
+        ['DGNS_PRCDR_ICD_IND', 188, 188],
+        ['CLM_MDCR_INSTNL_TOT', 189, 203],
+        ['CLM_MDCR_IP_PPS_CPTL_IME_AMT', 204, 218],
+        ['CLM_OPRTNL_IME_AMT', 219, 240],
+        ['CLM_MDCR_IP_PPS_DSP_RPRTNT_AMT', 241, 255],
+        ['CLM_HIPPS_UNCOMPD_CARE_AMT', 256, 270],
+        ['CLM_OPRTNL_DSPRPRTNT_AMT', 271, 292],
+        ['ADDITIONAL_COLUMNS', 293, 1000]
+    ],
+    'CCLF2': [
+        ['CUR_CLM_UNIQ_ID', 1, 13],
+        ['CLM_LINE_NUM', 13, 23],
+        ['BENE_MBI_ID', 24, 34],
+        ['BENE_HIC_NUM', 35, 45],
+        ['CLM_TYPE_CD', 46, 47],
+        ['CLM_LINE_FROM_DT', 48, 57],
+        ['CLM_LINE_THRU_DT', 58, 67],
+        ['CLM_LINE_PROD_REV_CTR_CD', 68, 71],
+        ['CLM_LINE_INSTNL_REV_CTR_DT', 72, 81],
+        ['CLM_LINE_HCPCS_CD', 82, 86],
+        ['BENE_EQTBL_BIC_HICN_NUM', 87, 97],
+        ['PRVDR_OSCAR_NUM', 98, 103],
+        ['CLM_FROM_DT', 104, 113],
+        ['CLM_THRU_DT', 114, 123],
+        ['CLM_LINE_SRVC_UNIT_QTY', 124, 147],
+        ['CLM_LINE_CVRD_PD_AMT', 148, 164],
+        ['HCPCS_1_MDFR_CD', 165, 166],
+        ['HCPCS_2_MDFR_CD', 167, 168],
+        ['HCPCS_3_MDFR_CD', 169, 170],
+        ['HCPCS_4_MDFR_CD', 171, 172],
+        ['HCPCS_5_MDFR_CD', 173, 174],
+        ['CLM_REV_APC_HIPPS_CD', 175, 179],
+    ],
+    'CCLF3': [
+        ['CUR_CLM_UNIQ_ID', 1, 13],
+        ['BENE_MBI_ID', 14, 24],
+        ['BENE_HIC_NUM', 25, 35],
+        ['CLM_TYPE_CD', 36, 37],
+        ['CLM_VAL_SQNC_NUM', 38, 39],
+        ['CLM_PRCDR_CD', 40, 46],
+        ['CLM_PRCDR_PRFRM_DT', 47, 56],
+        ['BENE_EQTBL_BIC_HICN_NUM', 57, 67],
+        ['PRVDR_OSCAR_NUM', 68, 73],
+        ['CLM_FROM_DT', 74, 83],
+        ['CLM_THRU_DT', 84, 93],
+        ['DGNS_PRCDR_ICD_IND', 94, 94],
+    ],
+    'CCLF4': [
+        ['CUR_CLM_UNIQ_ID', 1, 13],
+        ['BENE_MBI_ID', 14, 24],
+        ['BENE_HIC_NUM', 25, 35],
+        ['CLM_TYPE_CD', 36, 37],
+        ['CLM_PROD_TYPE_CD', 38, 38],
+        ['CLM_VAL_SQNC_NUM', 39, 40],
+        ['CLM_DGNS_CD', 41, 47],
+        ['BENE_EQTBL_BIC_HICN_NUM', 48, 58],
+        ['PRVDR_OSCAR_NUM', 59, 64],
+        ['CLM_FROM_DT', 65, 74],
+        ['CLM_THRU_DT', 75, 84],
+        ['CLM_POA_IND', 85, 91],
+        ['DGNS_PRCDR_ICD_IND', 92, 92],
+    ],
+    'CCLF5': [
+        ['CUR_CLM_UNIQ_ID', 1, 13],
+        ['CLM_LINE_NUM', 14, 23],
+        ['BENE_MBI_ID', 24, 34],
+        ['BENE_HIC_NUM', 35, 45],
+        ['CLM_TYPE_CD', 46, 47],
+        ['CLM_FROM_DT', 48, 57],
+        ['CLM_THRU_DT', 58, 67],
+        ['RNDRG_PRVDR_TYPE_CD', 68, 70],
+        ['RNDRG_PRVDR_FIPS_ST_CD', 71, 72],
+        ['CLM_PRVDR_SPCLTY_CD', 73, 74],
+        ['CLM_FED_TYPE_SRVC_CD', 75, 75],
+        ['CLM_POS_CD', 76, 77],
+        ['CLM_LINE_FROM_DT', 78, 87],
+        ['CLM_LINE_THRU_DT', 88, 97],
+        ['CLM_LINE_HCPCS_CD', 98, 102],
+        ['CLM_LINE_CVRD_PD_AMT', 103, 119],
+        ['BENE_EQTBL_BIC_HICN_NUM', 120, 130],
+        ['HCPCS_1_MDFR_CD', 131, 132],
+        ['HCPCS_2_MDFR_CD', 133, 134],
+        ['HCPCS_3_MDFR_CD', 135, 136],
+        ['HCPCS_4_MDFR_CD', 137, 138],
+        ['HCPCS_5_MDFR_CD', 139, 140],
+        ['CLM_LINE_SRVC_UNIT_QTY', 141, 164],
+    ],
+    'CCLF6': [
+        ['CUR_CLM_UNIQ_ID', 1, 13],
+        ['BENE_MBI_ID', 14, 24],
+        ['BENE_HIC_NUM', 25, 35],
+        ['BENE_EQTBL_BIC_HICN_NUM', 36, 46],
+        ['CLM_TYPE_CD', 47, 48],
+        ['ADMSN_DT', 49, 58],
+        ['DSCHRG_DT', 59, 68],
+        ['PRVDR_OSCAR_NUM', 69, 74],
+        ['CLM_FROM_DT', 75, 84],
+        ['CLM_THRU_DT', 85, 94],
+        ['ADMSN_HR_NUM', 95, 96],
+        ['DSCHRG_HR_NUM', 97, 98],
+        ['BENE_DSCHRG_STUS_CD', 99, 100],
+        ['BENE_PRVDR_TYPE_CD', 101, 103],
+        ['BENE_PRVDR_SPCLTY_CD', 104, 105],
+        ['BENE_MDCR_UTLZN_DAY_CNT', 106, 112],
+        ['BENE_MDCR_PPS_IME_AMT', 113, 127],
+        ['BENE_MDCR_DISPRTNT_AMT', 128, 142],
+        ['BENE_MDCR_OUTLIER_AMT', 143, 157],
+        ['BENE_MDCR_PPS_CAPTIAL_IME_AMT', 158, 172],
+        ['BENE_MDCR_OUTLIER_SVC_DAY_CNT', 173, 179],
+    ],
+    'CCLF7': [
+        ['CUR_CLM_UNIQ_ID', 1, 13],
+        ['BENE_MBI_ID', 14, 24],
+        ['BENE_HIC_NUM', 25, 35],
+        ['BENE_EQTBL_BIC_HICN_NUM', 36, 46],
+        ['CLM_TYPE_CD', 47, 48],
+        ['BENE_MGDS_PTNT_STUS_CD', 49, 50],
+        ['ADMSN_DT', 51, 60],
+        ['DSCHRG_DT', 61, 70],
+        ['PRVDR_OSCAR_NUM', 71, 76],
+        ['CLM_FROM_DT', 77, 86],
+        ['CLM_THRU_DT', 87, 96],
+        ['BENE_DSCHRG_STUS_CD', 97, 98],
+        ['BENE_CLM_SPCLTY_CD', 99, 101],
+        ['BENE_CLM_SRVC_FIPS_ST_CD', 102, 103],
+        ['BENE_MDCR_UTLZN_DAY_CNT', 104, 110],
+    ],
+    'CCLF8': [
+        ['CUR_CLM_UNIQ_ID', 1, 13],
+        ['BENE_MBI_ID', 14, 24],
+        ['BENE_HIC_NUM', 25, 35],
+        ['CLM_TYPE_CD', 36, 37],
+        ['BENE_MDCR_BNFT_ID', 38, 57],
+        ['BENE_MDCR_CLM_ID', 58, 77],
+        ['BENE_MDCR_PRTCPNT_ID', 78, 97],
+        ['BENE_MDCR_CLM_EFCTV_DT', 98, 107],
+        ['BENE_MDCR_CLM_THRU_DT', 108, 117],
+        ['BENE_MDCR_CLM_RSLT_IND', 118, 118],
+        ['BENE_MDCR_PRVDR_TYPE_CD', 119, 121],
+        ['BENE_MDCR_CVRG_CD', 122, 122],
+    ],
+    'CCLF9': [
+        ['HICN_MBI_XREF_IND', 1, 1],
+        ['CRNT_NUM', 2, 12],
+        ['PRVS_NUM', 13, 23],
+        ['PRVS_ID_EFCTV_DT', 24, 33],
+        ['PRVS_ID_OBSLT_DT', 34, 43],
+        ['BENE_RRB_NUM', 44, 55],
+    ]
+}
+
+
+# ==============================================================================
+# Create tables based on the file formats
+def create_tables():
+    for table_name, columns in file_formats.items():
+        column_defs = ', '.join([f"{col[0]} TEXT" for col in columns])
+        sql = f"CREATE TABLE IF NOT EXISTS {table_name} ({column_defs})"
+        cnx.execute(sql)
+    cnx.commit()
+
+
+# Insert row into the table
+def insert_row(sql, row):
+    cur = cnx.cursor()
+    cur.execute(sql, row)
+    cur.close()
+    cnx.commit()
+
+
+# Process files and import data to SQLite
+def process_files():
+    for file in file_list:
+        print("Processing file: " + file)
+        # Extract format type from file name
+        file_parts = file.split('.')
+        if len(file_parts) < 4:
+            print(f"Invalid file name format: {file}")
+            continue
+
+        # Get the format key from the file name
+        file_format_key = file_parts[3][:3]  # Get the first 3 characters of the fourth part
+        file_format_name = file_name_xwalk.get(file_format_key)
+
+        if not file_format_name:
+            print(f"Unknown file format for file: {file}")
+            continue
+
+        format_spec = file_formats[file_format_name]
+        column_names = [col[0] for col in format_spec]
+
+        with open(os.path.join(path_to_files, file), 'r') as f:
+            for line in f:
+                values = [line[col[1] - 1:col[2]].strip() for col in format_spec]
+                sql = f"INSERT INTO {file_format_name} ({', '.join(column_names)}) VALUES ({', '.join(['?'] * len(column_names))})"
+                insert_row(sql, values)
+
+
+# Fetch and print data from the specified table
+def fetch_data(table_name, limit=10):
+    cur = cnx.cursor()
+    query = f"SELECT * FROM {table_name} LIMIT ?"
+    cur.execute(query, (limit,))
+    rows = cur.fetchall()
+    cur.close()
+    return [dict(row) for row in rows]
+
+
+if __name__ == "__main__":
+    # Create tables
+    create_tables()
+
+    # Process files and import data
+    process_files()
+
+    # Fetch and print data from the CCLF1 table
+    table_name = 'CCLF9'
+    data = fetch_data(table_name)
+    for row in data:
+        print(row)
+
+    # Close the database connection
+    cnx.close()
